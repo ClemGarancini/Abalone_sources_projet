@@ -23,6 +23,9 @@ class MyPlayer(PlayerAbalone):
         """
         super().__init__(piece_type,name,time_limit,*args)
 
+    def mafunc():
+        return None
+
 
     def compute_action(self, current_state: GameState, **kwargs) -> Action:
         """
