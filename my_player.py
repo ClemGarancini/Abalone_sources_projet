@@ -43,8 +43,8 @@ class MyPlayer(PlayerAbalone):
                 for piece in [1,2]:
                     # Possible tile states are:
                         # 0: unaccessible tile
-                        # 1: white piece
-                        # 2: black piece
+                        # 1: my pieces
+                        # 2: opponent piece
                         # 3: empty tile
                     # But only tiles with pieces interest us
                     self.zobrist_keys["{},{},{}".format(row,column,piece)] = random.getrandbits(bitstring_length)
@@ -61,11 +61,13 @@ class MyPlayer(PlayerAbalone):
             h: int, zobrist hash of the state
         """
         h = 0
-        board = state.get_rep().get_env()
-        for row, column in list(board.keys()):
-            piece = board.get((row,column), None)
-            if  piece == 1 or piece == 2:
-                h = h ^ self.zobrist_keys.get(("{},{},{}".format(row, column, piece)), None)
+        board = state.get_rep().get_grid()
+        for row in range(len(board)):
+            for column in range(len(board[0])):
+                piece = board[row][column]
+                if piece == 'W' or piece == 'B':
+                    piece_type = 1 if piece == 'W' else 2
+                    h = h ^ self.zobrist_keys.get(("{},{},{}".format(row, column, piece_type)), None)
         return h
 
     def heuristique(self, state: GameState):
@@ -142,6 +144,56 @@ class MyPlayer(PlayerAbalone):
                 score -=  state.scores[key] 
         return score 
 
+    def maxValueWithTranspo(self, state: GameState, alpha, beta, theta = 0, limite = 40000):
+        if state.is_done():
+            return (0,None,theta)
+        
+        v_star = - np.inf
+        m = None
+        possible_actions = list(state.get_possible_actions())
+        for action in possible_actions:
+            next_state = action.get_next_game_state()
+            next_state_hash = self.zobrist_hash(next_state)
+            if theta == limite: 
+                v = self.heuristique(next_state)
+            else :
+                if not(next_state_hash in self.visited_positions):
+                    self.visited_positions.append(next_state_hash)
+                    theta +=1
+                    v,_,theta = self.minValueWithTranspo(next_state,alpha,beta, theta)
+                    if v > v_star:
+                        v_star = v
+                        m = action
+                        alpha = max(alpha,v_star)
+
+        if v_star >= beta:
+            return(v_star, m, theta)
+        return(v_star, m, theta)
+    
+    def minValueWithTranspo(self, state: GameState, alpha, beta, theta = 0, limite = 40000):
+        if state.is_done():
+            return (-6, None,theta)
+        v_star = np.inf
+        m = None
+        possible_actions = list(state.get_possible_actions())
+        for action in possible_actions:
+            next_state = action.get_next_game_state()
+            next_state_hash = self.zobrist_hash(next_state)
+            if theta == limite:
+                v = self.heuristique(next_state)
+            else:
+                if not(next_state_hash in self.visited_positions):
+                    self.visited_positions.append(next_state_hash)
+                    theta += 1
+                    v,_,theta = self.maxValueWithTranspo(next_state,alpha,beta,theta)
+                    if v < v_star:
+                        v_star = v
+                        m = action
+                        beta = min(beta,v_star)
+        if v_star <= alpha:
+                return(v_star, m, theta)
+        return(v_star, m,theta)
+
     def maxValue(self, state: GameState, alpha, beta, theta = 0, limite = 40000):
         if state.is_done():
             return (0,None,theta)
@@ -150,18 +202,15 @@ class MyPlayer(PlayerAbalone):
         possible_actions = list(state.get_possible_actions())
         for action in possible_actions:
             next_state = action.get_next_game_state()
-            next_state_hash = self.zobrist_hash(next_state)
-            if not(next_state_hash in self.visited_positions):
-                self.visited_positions.append(next_state_hash)
-                if theta == limite: 
-                    v = self.heuristique(next_state)
-                else :
-                    theta +=1
-                    v,_,theta = self.minValue(next_state,alpha,beta, theta)
-                if v > v_star:
-                    v_star = v
-                    m = action
-                    alpha = max(alpha,v_star)
+            if theta == limite: 
+                v = self.heuristique(next_state)
+            else :
+                theta +=1
+                v,_,theta = self.minValue(next_state,alpha,beta, theta)
+            if v > v_star:
+                v_star = v
+                m = action
+                alpha = max(alpha,v_star)
         if v_star >= beta:
             return(v_star, m, theta)
         return(v_star, m, theta)
@@ -174,18 +223,15 @@ class MyPlayer(PlayerAbalone):
         possible_actions = list(state.get_possible_actions())
         for action in possible_actions:
             next_state = action.get_next_game_state()
-            next_state_hash = self.zobrist_hash(next_state)
-            if not(next_state_hash in self.visited_positions):
-                self.visited_positions.append(next_state_hash)
-                if theta == limite:
-                    v = self.heuristique(next_state)
-                else:
-                    theta += 1
-                    v,_,theta = self.maxValue(next_state,alpha,beta,theta)
-                if v < v_star:
-                    v_star = v
-                    m = action
-                    beta = min(beta,v_star)
+            if theta == limite:
+                v = self.heuristique(next_state)
+            else:
+                theta += 1
+                v,_,theta = self.maxValue(next_state,alpha,beta,theta)
+            if v < v_star:
+                v_star = v
+                m = action
+                beta = min(beta,v_star)
         if v_star <= alpha:
                 return(v_star, m, theta)
         return(v_star, m,theta)
@@ -204,10 +250,14 @@ class MyPlayer(PlayerAbalone):
         temps_debut = time.time()
         if self.first_action:
             self.init_zobrist(current_state.rep)
-            self.first_action = False
 
-        
-        _, action, _ = self.maxValue(current_state,- 6, 0)
+        if TRANSPO:
+            _, action, _ = self.maxValueWithTranspo(current_state,- 6, 0)
+        else:
+            _, action, _ = self.maxValue(current_state,- 6, 0)
+
+        self.first_action = False
         self.visited_positions = []
-        print("here: ", action)
         return action
+
+TRANSPO = True
