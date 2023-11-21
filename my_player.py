@@ -157,9 +157,9 @@ class MyPlayer(PlayerAbalone):
             if theta == limite: 
                 v = self.heuristique(next_state)
             else :
+                theta +=1
                 if not(next_state_hash in self.visited_positions):
                     self.visited_positions.append(next_state_hash)
-                    theta +=1
                     v,_,theta = self.minValueWithTranspo(next_state,alpha,beta, theta)
                     if v > v_star:
                         v_star = v
@@ -182,9 +182,9 @@ class MyPlayer(PlayerAbalone):
             if theta == limite:
                 v = self.heuristique(next_state)
             else:
+                theta += 1
                 if not(next_state_hash in self.visited_positions):
                     self.visited_positions.append(next_state_hash)
-                    theta += 1
                     v,_,theta = self.maxValueWithTranspo(next_state,alpha,beta,theta)
                     if v < v_star:
                         v_star = v
