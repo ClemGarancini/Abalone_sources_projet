@@ -46,7 +46,7 @@ class MyPlayer(PlayerAbalone):
                         # 2: black piece
                         # 3: empty tile
                     # But only tiles with pieces interest us
-                    self.zobrist_keys[(row, column, piece)] = random.getrandbits(bitstring_length)
+                    self.zobrist_keys["{},{},{}".format(row,column,piece)] = random.getrandbits(bitstring_length)
         return None
 
     def zobrist_hash(self, state: GameState):
@@ -64,7 +64,7 @@ class MyPlayer(PlayerAbalone):
         for row, column in list(board.keys()):
             piece = board.get((row,column), None)
             if  piece == 1 or piece == 2:
-                h = h ^ self.zobrist_keys.get((row, column, piece), None)
+                h = h ^ self.zobrist_keys.get(("{},{},{}".format(row, column, piece)), None)
         return h
 
     def heuristique(self, state: GameState):
@@ -198,6 +198,7 @@ class MyPlayer(PlayerAbalone):
         if self.first_action:
             self.init_zobrist(current_state.rep)
             self.first_action = False
+            print(self.zobrist_keys)
 
         
         _, action, _ = self.maxValue(current_state,- 6, 0)
