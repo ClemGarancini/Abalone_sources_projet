@@ -1,0 +1,9 @@
+Idées d'amélio:
+
+- Heuristique:
+	menaces de perdre une bille
+- Iterative deepening, jusqu'à fin du temps, faire évoluer prof max
+- Ordering nodes to expand (compare for pruning quality)
+- Upgrade Pruning(to check):
+	aspiration windows, null-move pruning, and late move reductions
+
