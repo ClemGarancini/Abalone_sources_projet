@@ -33,6 +33,7 @@ class MyPlayer(PlayerAbalone):
         self.visited_positions = []
         self.maxDepth = 10
         self.maxExpansion = 10000
+        self.time_begin = 0
 
     def init_zobrist(self, board: BoardAbalone, bitstring_length=64):
         """
@@ -174,30 +175,16 @@ class MyPlayer(PlayerAbalone):
         # Initialize optimal move
         m_star = None
         # Get the best 5 actions
-        possible_actions = list(state.get_possible_actions())
+        possible_actions = self.actions_to_expore(state)
 
-        # h = []
-        # if self.first_action and depth == 0:
-        #     for action in possible_actions:
-        #         next_state = action.get_next_game_state()
-        #         h.append(self.heuristique(next_state))
-        #     print("h: ", h)
-        #     print(
-        #         "mean: ",
-        #         np.mean(h),
-        #         ", std: ",
-        #         np.std(h),
-        #         " High: ",
-        #         np.max(h),
-        #         " Low: ",
-        #         np.min(h),
-        #     )
         for action in possible_actions:
             # Get Next state
             next_state = action.get_next_game_state()
 
-            # Max depth reached
-            if depth >= self.maxDepth:
+            # # Max time reached
+            # if time.time() - self.time_begin > 15:
+            #     v = self.heuristique(next_state)
+            if theta >= self.maxExpansion:
                 v = self.heuristique(next_state)
             # Expansion of node's branches
             else:
@@ -241,14 +228,17 @@ class MyPlayer(PlayerAbalone):
         # Initialization of optimal move
         m_star = None
         # Get best 5 actions
-        possible_actions = list(state.get_possible_actions())
+        possible_actions = self.actions_to_expore(state)
         for action in possible_actions:
             # Get next state
             next_state = action.get_next_game_state()
 
-            # Max depth reached
-            if depth >= self.maxDepth:
+            # Max time reached
+            # if time.time() - self.time_begin > 15:
+            #     v = self.heuristique(next_state)
+            if theta >= self.maxExpansion:
                 v = self.heuristique(next_state)
+
             # Expansion of node's children
             else:
                 if TRANSPO:
@@ -302,6 +292,7 @@ class MyPlayer(PlayerAbalone):
         _, action, _ = self.maxValue(current_state, -np.inf, np.inf)
         self.first_action = False
 
+        print("time elapsed for decision process: ", time.time() - self.time_begin)
         self.visited_positions = []
         return action
 
