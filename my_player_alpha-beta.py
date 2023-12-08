@@ -181,11 +181,10 @@ class MyPlayer(PlayerAbalone):
             # Get Next state
             next_state = action.get_next_game_state()
 
+            # (self.get_remaining_time() / (25 - self.step)) - 3
             # Limit time of computing
-            if (
-                time.time() - self.begin_time_thinking
-                >= (self.get_remaining_time() / (25 - self.step)) - 3
-            ):
+            # if time.time() - self.begin_time_thinking >= 2:
+            if theta >= self.maxExpansion:
                 v = self.heuristique(next_state)
 
             # Expansion of node's branches
@@ -223,18 +222,10 @@ class MyPlayer(PlayerAbalone):
             # Get next state
             next_state = action.get_next_game_state()
 
-            # Limit time of computing
-            if (
-                time.time() - self.begin_time_thinking
-                >= (self.get_remaining_time() / (50 - state.step)) - 2
-            ):
-                v = self.heuristique(next_state)
-
             # Expansion of node's children
-            else:
-                theta += 1
-                depth += 1
-                v, _, theta = self.maxValue(next_state, alpha, beta, theta)
+            theta += 1
+            depth += 1
+            v, _, theta = self.maxValue(next_state, alpha, beta, theta)
 
             if v and v < v_star:
                 v_star = v

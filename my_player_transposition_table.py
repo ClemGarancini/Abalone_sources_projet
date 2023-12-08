@@ -30,11 +30,14 @@ class MyPlayer(PlayerAbalone):
         super().__init__(piece_type, name, time_limit, *args)
         self.zobrist_keys = {}
         self.first_action = True
-        self.visited_positions = []
+        self.visited_positions = {}
         self.maxDepth = 10
-        self.maxExpansion = 10000
+        self.maxExpansion = 50000
         self.begin_time_thinking = 0
         self.step = 0
+
+        self.nodes_saved_from_expansion = 0
+        self.data_transpo = []
 
     def init_zobrist(self, board: BoardAbalone, bitstring_length=64):
         """
@@ -183,20 +186,19 @@ class MyPlayer(PlayerAbalone):
             next_state = action.get_next_game_state()
 
             # Limit time of computing
-            if (
-                time.time() - self.begin_time_thinking
-                >= (self.get_remaining_time() / (50 - state.step)) - 2
-            ):
+            if theta >= self.maxExpansion:
                 v = self.heuristique(next_state)
             # Expansion of node's branches
             else:
-                # Check if state has been visited
+                # Check if state has been visited-
                 next_state_hash = self.zobrist_hash(next_state)
                 if not next_state_hash in self.visited_positions:
-                    self.visited_positions.append(next_state_hash)
+                    self.visited_positions[next_state_hash] = True
                     theta += 1
                     depth += 1
                     v, _, theta = self.minValue(next_state, alpha, beta, theta, depth)
+                else:
+                    self.nodes_saved_from_expansion += 1
 
             if v and v > v_star:
                 v_star = v
@@ -227,21 +229,15 @@ class MyPlayer(PlayerAbalone):
             # Get next state
             next_state = action.get_next_game_state()
 
-            # Limit time of computing
-            if (
-                time.time() - self.begin_time_thinking
-                >= (self.get_remaining_time() / (50 - state.step)) - 2
-            ):
-                v = self.heuristique(next_state)
-
             # Expansion of node's children
+            next_state_hash = self.zobrist_hash(next_state)
+            if not next_state_hash in self.visited_positions:
+                self.visited_positions[next_state_hash] = True
+                theta += 1
+                depth += 1
+                v, _, theta = self.maxValue(next_state, alpha, beta, theta, depth)
             else:
-                next_state_hash = self.zobrist_hash(next_state)
-                if not next_state_hash in self.visited_positions:
-                    self.visited_positions.append(next_state_hash)
-                    theta += 1
-                    depth += 1
-                    v, _, theta = self.maxValue(next_state, alpha, beta, theta, depth)
+                self.nodes_saved_from_expansion += 1
 
             if v and v < v_star:
                 v_star = v
@@ -273,13 +269,22 @@ class MyPlayer(PlayerAbalone):
         Returns:
             Action: selected feasible action
         """
-        self.time_begin = time.time()
+        self.begin_time_thinking = time.time()
         if self.first_action:
             self.init_zobrist(current_state.rep)
 
         _, action, _ = self.maxValue(current_state, -np.inf, np.inf)
 
+        self.data_transpo.append(self.nodes_saved_from_expansion)
+        self.nodes_saved_from_expansion = 0
+        print(current_state.step)
+        if current_state.step >= 47:
+            print(
+                "Mean number of nodes not expanded with transposition tables by round: ",
+                np.mean(self.data_transpo),
+            )
+
         self.step += 1
         self.first_action = False
-        self.visited_positions = []
+        self.visited_positions = {}
         return action
